@@ -1,7 +1,5 @@
 package com.covenant.springbootmysql.model;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import javax.persistence.*;
 
 import lombok.Builder;
@@ -18,7 +16,6 @@ public class Book {
     private Long id;
 
     private String name;
-
     private String isbn;
 
 
@@ -33,8 +30,7 @@ public class Book {
     }
 
     @Builder
-    public Book(Long id, String name, String isbn, Author author, List<Lend> lends) {
-        this.id = id;
+    public Book(String name, String isbn, Author author, List<Lend> lends) {
         this.name = name;
         this.isbn = isbn;
         this.author = author;

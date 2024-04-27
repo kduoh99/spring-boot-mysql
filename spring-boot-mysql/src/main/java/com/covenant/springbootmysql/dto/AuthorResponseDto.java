@@ -11,7 +11,6 @@ public class AuthorResponseDto {
     private final String firstName;
     private final String lastName;
 
-
     public static AuthorResponseDto fromEntity(Author author) {
         return new AuthorResponseDto(author.getId(), author.getFirstName(), author.getLastName());
     }

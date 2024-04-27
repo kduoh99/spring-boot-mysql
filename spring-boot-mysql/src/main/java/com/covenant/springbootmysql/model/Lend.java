@@ -3,6 +3,7 @@ package com.covenant.springbootmysql.model;
 import java.time.Instant;
 
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import javax.persistence.*;
 
 import lombok.Builder;
@@ -21,7 +22,6 @@ public class Lend {
     private LendStatus status;
 
     private Instant startOn;
-
     private Instant dueOn;
 
     @ManyToOne
@@ -38,12 +38,11 @@ public class Lend {
     }
 
     @Builder
-    public Lend(Long id, LendStatus status, Instant startOn, Instant dueOn, Book book, Member member) {
-        this.id = id;
+    public Lend(Member member, Book book, LendStatus status, Instant startOn, Instant dueOn) {
+        this.member = member;
+        this.book = book;
         this.status = status;
         this.startOn = startOn;
         this.dueOn = dueOn;
-        this.book = book;
-        this.member = member;
     }
 }

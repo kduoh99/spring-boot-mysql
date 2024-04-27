@@ -1,6 +1,7 @@
 package com.covenant.springbootmysql.model;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import javax.persistence.*;
 
 import lombok.Builder;
@@ -31,8 +32,7 @@ public class Member {
     }
 
     @Builder
-    public Member(Long id, String firstName, String lastName, MemberStatus status, List<Lend> lends) {
-        this.id = id;
+    public Member(String firstName, String lastName, MemberStatus status, List<Lend> lends) {
         this.firstName = firstName;
         this.lastName = lastName;
         this.status = status;
