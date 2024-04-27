@@ -1,10 +1,7 @@
 package com.covenant.springbootmysql.service;
 
+import com.covenant.springbootmysql.dto.*;
 import com.covenant.springbootmysql.model.*;
-import com.covenant.springbootmysql.model.request.AuthorCreationRequest;
-import com.covenant.springbootmysql.model.request.BookCreationRequest;
-import com.covenant.springbootmysql.model.request.BookLendRequest;
-import com.covenant.springbootmysql.model.request.MemberCreationRequest;
 import com.covenant.springbootmysql.repository.AuthorRepository;
 import com.covenant.springbootmysql.repository.BookRepository;
 import com.covenant.springbootmysql.repository.LendRepository;
@@ -18,7 +15,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,27 +27,25 @@ public class LibraryService {
     private final LendRepository lendRepository;
     private final BookRepository bookRepository;
 
-    public Book readBook(Long id) {
-        Optional<Book> book = bookRepository.findById(id);
-        if (book.isPresent()) {
-            return book.get();
-        }
-        throw new EntityNotFoundException("Cant find any book under given ID");
+    public BookResponseDto readBook(Long id) {
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Cant find any book under given ID: " + id));
+        return toBookResponseDto(book);
     }
 
-    public List<Book> readBooks() {
-        return bookRepository.findAll();
+    public List<BookResponseDto> readBooks() {
+        return bookRepository.findAll().stream()
+                .map(BookResponseDto::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public Book readBook(String isbn) {
-        Optional<Book> book = bookRepository.findByIsbn(isbn);
-        if (book.isPresent()) {
-            return book.get();
-        }
-        throw new EntityNotFoundException("Cant find any book under given ISBN");
+    public BookResponseDto readBook(String isbn) {
+        Book book = bookRepository.findByIsbn(isbn)
+                .orElseThrow(() -> new EntityNotFoundException("Cant find any book under given ISBN: " + isbn));
+        return toBookResponseDto(book);
     }
 
-    public Book createBook(BookCreationRequest request) {
+    public BookResponseDto createBook(BookCreationRequestDto request) {
         Author author = authorRepository.findById(request.getAuthorId())
                 .orElseThrow(() -> new EntityNotFoundException("Author Not Found"));
         Book book = Book.builder()
@@ -58,38 +53,47 @@ public class LibraryService {
                 .isbn(request.getIsbn())
                 .author(author)
                 .build();
-        return bookRepository.save(book);
+        book = bookRepository.save(book);
+        return BookResponseDto.fromEntity(book);
     }
 
     public void deleteBook(Long id) {
         bookRepository.deleteById(id);
     }
 
-    public Member createMember(MemberCreationRequest request) {
-        Member member = Member.builder()
-                .lastName(request.getLastName())
-                .firstName(request.getFirstName())
-                .status(MemberStatus.ACTIVE)
-                .build();
-        return memberRepository.save(member);
+    private BookResponseDto toBookResponseDto(Book book) {
+        String authorName = book.getAuthor().getFirstName() + " " + book.getAuthor().getLastName();
+        return new BookResponseDto(book.getId(), book.getName(), book.getIsbn(), authorName);
     }
 
-    public Member updateMember (Long id, MemberCreationRequest request) {
+    public MemberResponseDto createMember(MemberCreationRequestDto request) {
+        Member member = Member.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .status(MemberStatus.ACTIVE)
+                .build();
+        member = memberRepository.save(member);
+        return MemberResponseDto.fromEntity(member);
+    }
+
+    public MemberResponseDto updateMember (Long id, MemberUpdateRequestDto request) {
         Member member = memberRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Member not present in the database"));
         member.updateName(request.getFirstName(), request.getLastName());
-        return memberRepository.save(member);
+        member = memberRepository.save(member);
+        return MemberResponseDto.fromEntity(member);
     }
 
-    public Author createAuthor (AuthorCreationRequest request) {
+    public AuthorResponseDto createAuthor (AuthorCreationRequestDto request) {
         Author author = Author.builder()
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .build();
-        return authorRepository.save(author);
+        author = authorRepository.save(author);
+        return AuthorResponseDto.fromEntity(author);
     }
 
-    public List<String> lendABook (BookLendRequest request) {
+    public List<String> lendABook (BookLendRequestDto request) {
         Member member = memberRepository.findById(request.getMemberId())
                 .orElseThrow(() -> new EntityNotFoundException("Member not present in the database"));
         if (member.getStatus() != MemberStatus.ACTIVE) {
@@ -97,7 +101,6 @@ public class LibraryService {
         }
 
         List<String> booksApprovedToBurrow = new ArrayList<>();
-
         request.getBookIds().forEach(bookId -> {
             Book book = bookRepository.findById(bookId)
                     .orElseThrow(() -> new EntityNotFoundException("Cant find any book under given ID"));
@@ -119,25 +122,25 @@ public class LibraryService {
     }
 
 
-    public List<Author> readAuthors() {
-        return authorRepository.findAll();
+    public List<AuthorResponseDto> readAuthors() {
+        return authorRepository.findAll().stream()
+                .map(AuthorResponseDto::fromEntity)
+                .collect(Collectors.toList());
     }
 
-    public Book updateBook(Long bookId, BookCreationRequest request) {
-        Optional<Author> author = authorRepository.findById(request.getAuthorId());
-        if (!author.isPresent()) {
-            throw new EntityNotFoundException("Author Not Found");
-        }
-        Optional<Book> optionalBook = bookRepository.findById(bookId);
-        if (!optionalBook.isPresent()) {
-            throw new EntityNotFoundException("Book Not Found");
-        }
-        Book book = optionalBook.get();
-        book.update(request.getName(), request.getIsbn(), author.get());
-        return bookRepository.save(book);
+    public BookResponseDto updateBook(Long bookId, BookUpdateRequestDto request) {
+        Author author = authorRepository.findById(request.getAuthorId())
+                .orElseThrow(() -> new EntityNotFoundException("Author Not Found"));
+        Book book = bookRepository.findById(bookId)
+                .orElseThrow(() -> new EntityNotFoundException("Book Not Found"));
+        book.update(request.getName(), request.getIsbn(), author);
+        book = bookRepository.save(book);
+        return BookResponseDto.fromEntity(book);
     }
 
-    public List<Member> readMembers() {
-        return memberRepository.findAll();
+    public List<MemberResponseDto> readMembers() {
+        return memberRepository.findAll().stream()
+                .map(MemberResponseDto::fromEntity)
+                .collect(Collectors.toList());
     }
 }

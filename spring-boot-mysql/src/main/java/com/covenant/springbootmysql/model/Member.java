@@ -11,7 +11,6 @@ import java.util.List;
 @Getter
 @Entity
 @Table(name = "member")
-@Builder
 public class Member {
 
     @Id
@@ -31,6 +30,7 @@ public class Member {
     protected Member() {
     }
 
+    @Builder
     public Member(Long id, String firstName, String lastName, MemberStatus status, List<Lend> lends) {
         this.id = id;
         this.firstName = firstName;

@@ -12,7 +12,6 @@ import java.util.List;
 @Getter
 @Entity
 @Table(name = "book")
-@Builder
 public class Book {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,10 +24,8 @@ public class Book {
 
     @ManyToOne
     @JoinColumn(name = "author_id")
-    @JsonManagedReference
     private Author author;
 
-    @JsonBackReference
     @OneToMany(mappedBy = "book", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Lend> lends;
 

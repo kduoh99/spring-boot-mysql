@@ -18,10 +18,8 @@ public class Author {
     private Long id;
 
     private String firstName;
-
     private String lastName;
 
-    @JsonBackReference
     @OneToMany(mappedBy = "author", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Book> books;
 

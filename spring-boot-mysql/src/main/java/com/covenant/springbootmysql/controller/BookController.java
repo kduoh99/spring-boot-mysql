@@ -1,8 +1,9 @@
 package com.covenant.springbootmysql.controller;
 
-import com.covenant.springbootmysql.model.Book;
-import com.covenant.springbootmysql.model.request.BookCreationRequest;
-import com.covenant.springbootmysql.model.request.BookLendRequest;
+import com.covenant.springbootmysql.dto.BookCreationRequestDto;
+import com.covenant.springbootmysql.dto.BookResponseDto;
+import com.covenant.springbootmysql.dto.BookLendRequestDto;
+import com.covenant.springbootmysql.dto.BookUpdateRequestDto;
 import com.covenant.springbootmysql.service.LibraryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,26 +20,30 @@ public class BookController {
     private final LibraryService libraryService;
 
     @GetMapping
-    public ResponseEntity readBooks(@RequestParam(required = false) String isbn) {
+    public ResponseEntity<List<BookResponseDto>> readBooks(@RequestParam(required = false) String isbn) {
         if (isbn == null) {
             return ResponseEntity.ok(libraryService.readBooks());
+        } else {
+            return ResponseEntity.ok(List.of(libraryService.readBook(isbn)));
         }
-        return ResponseEntity.ok(libraryService.readBook(isbn));
     }
 
     @GetMapping("/{bookId}")
-    public ResponseEntity<Book> readBook(@PathVariable Long bookId) {
-        return ResponseEntity.ok(libraryService.readBook(bookId));
+    public ResponseEntity<BookResponseDto> readBook(@PathVariable Long bookId) {
+        BookResponseDto responseDto = libraryService.readBook(bookId);
+        return ResponseEntity.ok(responseDto);
     }
 
     @PostMapping
-    public ResponseEntity<Book> createBook(@RequestBody BookCreationRequest request) {
-        return ResponseEntity.ok(libraryService.createBook(request));
+    public ResponseEntity<BookResponseDto> createBook(@RequestBody BookCreationRequestDto request) {
+        BookResponseDto responseDto = libraryService.createBook(request);
+        return ResponseEntity.ok(responseDto);
     }
 
     @PatchMapping("/{bookId}")
-    public ResponseEntity<Book> updateBook(@PathVariable("bookId") Long bookId, @RequestBody BookCreationRequest request) {
-        return ResponseEntity.ok(libraryService.updateBook(bookId, request));
+    public ResponseEntity<BookResponseDto> updateBook(@PathVariable("bookId") Long bookId, @RequestBody BookUpdateRequestDto request) {
+        BookResponseDto responseDto = libraryService.updateBook(bookId, request);
+        return ResponseEntity.ok(responseDto);
     }
 
     @DeleteMapping("/{bookId}")
@@ -48,7 +53,8 @@ public class BookController {
     }
 
     @PostMapping("/lend")
-    public ResponseEntity<List<String>> lendABook(@RequestBody BookLendRequest bookLendRequests) {
-        return ResponseEntity.ok(libraryService.lendABook(bookLendRequests));
+    public ResponseEntity<List<String>> lendABook(@RequestBody BookLendRequestDto bookLendRequestsDto) {
+        List<String> approvedBooks = libraryService.lendABook(bookLendRequestsDto);
+        return ResponseEntity.ok(approvedBooks);
     }
 }
