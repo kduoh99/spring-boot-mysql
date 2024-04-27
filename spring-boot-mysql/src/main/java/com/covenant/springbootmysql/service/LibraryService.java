@@ -10,7 +10,6 @@ import com.covenant.springbootmysql.repository.BookRepository;
 import com.covenant.springbootmysql.repository.LendRepository;
 import com.covenant.springbootmysql.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityNotFoundException;
@@ -29,7 +28,6 @@ public class LibraryService {
     private final LendRepository lendRepository;
     private final BookRepository bookRepository;
 
-    // id를 기준으로 데이터베이스의 도서를 조회
     public Book readBook(Long id) {
         Optional<Book> book = bookRepository.findById(id);
         if (book.isPresent()) {
@@ -38,12 +36,10 @@ public class LibraryService {
         throw new EntityNotFoundException("Cant find any book under given ID");
     }
 
-    // 데이터베이스에 저장된 모든 도서를 조회
     public List<Book> readBooks() {
         return bookRepository.findAll();
     }
 
-    // isbn을 기준으로 데이터베이스의 도서를 조회
     public Book readBook(String isbn) {
         Optional<Book> book = bookRepository.findByIsbn(isbn);
         if (book.isPresent()) {
@@ -52,59 +48,48 @@ public class LibraryService {
         throw new EntityNotFoundException("Cant find any book under given ISBN");
     }
 
-    // BookCreationRequest로 도서를 생성
-    public Book createBook(BookCreationRequest book) {
-        Optional<Author> author = authorRepository.findById(book.getAuthorId());
-        if (!author.isPresent()) {
-            throw new EntityNotFoundException("Author Not Found");
-        }
-        Book bookToCreate = new Book();
-        BeanUtils.copyProperties(book, bookToCreate);
-        bookToCreate.setAuthor(author.get());
-        return bookRepository.save(bookToCreate);
+    public Book createBook(BookCreationRequest request) {
+        Author author = authorRepository.findById(request.getAuthorId())
+                .orElseThrow(() -> new EntityNotFoundException("Author Not Found"));
+        Book book = Book.builder()
+                .name(request.getName())
+                .isbn(request.getIsbn())
+                .author(author)
+                .build();
+        return bookRepository.save(book);
     }
 
-    // id를 기준으로 도서를 삭제
     public void deleteBook(Long id) {
         bookRepository.deleteById(id);
     }
 
-    // MemberCreationRequest로 회원을 생성
     public Member createMember(MemberCreationRequest request) {
-        Member member = new Member();
-        BeanUtils.copyProperties(request, member);
-        member.setStatus(MemberStatus.ACTIVE);
+        Member member = Member.builder()
+                .lastName(request.getLastName())
+                .firstName(request.getFirstName())
+                .status(MemberStatus.ACTIVE)
+                .build();
         return memberRepository.save(member);
     }
 
-    // id에 해당하는 회원을 MemberCreationRequest로 변경
     public Member updateMember (Long id, MemberCreationRequest request) {
-        Optional<Member> optionalMember = memberRepository.findById(id);
-        if (!optionalMember.isPresent()) {
-            throw new EntityNotFoundException("Member not present in the database");
-        }
-        Member member = optionalMember.get();
-        member.setLastName(request.getLastName());
-        member.setFirstName(request.getFirstName());
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Member not present in the database"));
+        member.updateName(request.getFirstName(), request.getLastName());
         return memberRepository.save(member);
     }
 
-    // AuthorCreationRequest로 저자를 생성
     public Author createAuthor (AuthorCreationRequest request) {
-        Author author = new Author();
-        BeanUtils.copyProperties(request, author);
+        Author author = Author.builder()
+                .firstName(request.getFirstName())
+                .lastName(request.getLastName())
+                .build();
         return authorRepository.save(author);
     }
 
-    // BookLendRequest로 도서를 대출
     public List<String> lendABook (BookLendRequest request) {
-
-        Optional<Member> memberForId = memberRepository.findById(request.getMemberId());
-        if (!memberForId.isPresent()) {
-            throw new EntityNotFoundException("Member not present in the database");
-        }
-
-        Member member = memberForId.get();
+        Member member = memberRepository.findById(request.getMemberId())
+                .orElseThrow(() -> new EntityNotFoundException("Member not present in the database"));
         if (member.getStatus() != MemberStatus.ACTIVE) {
             throw new RuntimeException("User is not active to proceed a lending.");
         }
@@ -112,24 +97,21 @@ public class LibraryService {
         List<String> booksApprovedToBurrow = new ArrayList<>();
 
         request.getBookIds().forEach(bookId -> {
+            Book book = bookRepository.findById(bookId)
+                    .orElseThrow(() -> new EntityNotFoundException("Cant find any book under given ID"));
 
-            Optional<Book> bookForId = bookRepository.findById(bookId);
-            if (!bookForId.isPresent()) {
-                throw new EntityNotFoundException("Cant find any book under given ID");
-            }
-
-            Optional<Lend> burrowedBook = lendRepository.findByBookAndStatus(bookForId.get(), LendStatus.BURROWED);
-            if (!burrowedBook.isPresent()) {
-                booksApprovedToBurrow.add(bookForId.get().getName());
-                Lend lend = new Lend();
-                lend.setMember(memberForId.get());
-                lend.setBook(bookForId.get());
-                lend.setStatus(LendStatus.BURROWED);
-                lend.setStartOn(Instant.now());
-                lend.setDueOn(Instant.now().plus(30, ChronoUnit.DAYS));
+            boolean isBurrowed = lendRepository.findByBookAndStatus(book, LendStatus.BURROWED).isPresent();
+            if (!isBurrowed) {
+                booksApprovedToBurrow.add(book.getName());
+                Lend lend = Lend.builder()
+                        .member(member)
+                        .book(book)
+                        .status(LendStatus.BURROWED)
+                        .startOn(Instant.now())
+                        .dueOn(Instant.now().plus(30, ChronoUnit.DAYS))
+                        .build();
                 lendRepository.save(lend);
             }
-
         });
         return booksApprovedToBurrow;
     }
@@ -149,9 +131,7 @@ public class LibraryService {
             throw new EntityNotFoundException("Book Not Found");
         }
         Book book = optionalBook.get();
-        book.setIsbn(request.getIsbn());
-        book.setName(request.getName());
-        book.setAuthor(author.get());
+        book.update(request.getName(), request.getIsbn(), author.get());
         return bookRepository.save(book);
     }
 
